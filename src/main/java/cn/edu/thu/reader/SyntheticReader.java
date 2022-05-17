@@ -21,6 +21,7 @@ package cn.edu.thu.reader;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,7 @@ public class SyntheticReader extends BasicReader {
   private int deviceCursor = 0;
   private int pointCursor = 0;
   private Random random = new Random(123456);
-  private List<Record> batch = new ArrayList<>(config.BATCH_SIZE);
+  private RecordBatch batch = new RecordBatch(config.BATCH_SIZE);
   private String[] deviceNames = new String[config.syntheticDeviceNum];
 
   public SyntheticReader(Config config) {
@@ -65,7 +66,7 @@ public class SyntheticReader extends BasicReader {
   }
 
   @Override
-  public List<Record> convertCachedLinesToRecords() {
+  public RecordBatch convertCachedLinesToRecords() {
     String device = deviceNames[deviceCursor];
 
     int i = 0;
@@ -82,7 +83,7 @@ public class SyntheticReader extends BasicReader {
       deviceCursor ++;
       pointCursor = 0;
     }
-    return batch.subList(0, i);
+    return new RecordBatch(batch.subList(0, i));
   }
 
   @Override

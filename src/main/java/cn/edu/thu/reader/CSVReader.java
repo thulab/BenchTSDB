@@ -23,6 +23,7 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.IndexedSchema;
 import cn.edu.thu.common.IndexedSchema.MapIndexedSchema;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,6 +51,9 @@ public class CSVReader extends BasicReader {
   private Schema currentFileSchema;
   private boolean useDateFormat = true;
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+  private int fieldCnt;
+  private long pointCnt;
 
   public CSVReader(Config config, List<String> files) {
     super(config, files);
@@ -198,8 +202,8 @@ public class CSVReader extends BasicReader {
   }
 
   @Override
-  public List<Record> convertCachedLinesToRecords() {
-    List<Record> records = new ArrayList<>();
+  public RecordBatch convertCachedLinesToRecords() {
+    RecordBatch records = new RecordBatch();
     for (String cachedLine : cachedLines) {
       try {
         records.add(convertToRecord(cachedLine));
@@ -207,6 +211,7 @@ public class CSVReader extends BasicReader {
         logger.warn("Skipping mal-formatted record {}, ", cachedLine, e);
       }
     }
+    pointCnt += records.getNonNullFieldNum();
     return records;
   }
 
@@ -295,6 +300,7 @@ public class CSVReader extends BasicReader {
     Schema fileSchema;
     try {
       fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
+      fieldCnt += fileSchema.getFields().length;
       logger.info("File {} schema collected", currentFile);
       logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
@@ -361,5 +367,11 @@ public class CSVReader extends BasicReader {
 
       return schema.rebuildIndex();
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    super.close();
+    logger.info("Read {} points of {} fields from {} files", pointCnt, fieldCnt, files.size());
   }
 }

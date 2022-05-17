@@ -104,9 +104,12 @@ public class MainLoad {
       Thread.sleep(1000);
     }
 
-    logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",
+    logger.info("All done! Total records:{}, non-null points:{}, time:{} ms, speed:{}, null "
+            + "ratio: {}",
         statistics.recordNum,
-        statistics.pointNum, (float)statistics.timeCost.get() / 1000_000F, statistics.speed());
+        statistics.nonNullPointNum, (float)statistics.timeCost.get() / 1000_000F,
+        statistics.speed(),
+        statistics.nonNullPointNum.get() * 1.0 / statistics.allPointNum.get());
 
   }
 

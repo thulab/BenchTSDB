@@ -150,6 +150,10 @@ public class TsFileManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
+    if (records.isEmpty()) {
+      return 0;
+    }
+
     long start = System.nanoTime();
     String tag = records.get(0).tag;
     if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {

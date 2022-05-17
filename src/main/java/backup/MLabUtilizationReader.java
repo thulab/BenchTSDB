@@ -2,6 +2,7 @@ package backup;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.reader.BasicReader;
 import com.alibaba.fastjson.JSON;
@@ -43,8 +44,8 @@ public class MLabUtilizationReader extends BasicReader {
 
 
     @Override
-    public List<Record> convertCachedLinesToRecords() {
-        List<Record> records = new ArrayList<>();
+    public RecordBatch convertCachedLinesToRecords() {
+        RecordBatch records = new RecordBatch();
         for (String line : cachedLines) {
             records.addAll(convertToRecord(line));
         }

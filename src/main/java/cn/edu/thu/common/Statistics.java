@@ -6,7 +6,8 @@ public class Statistics {
 
     public AtomicLong fileNum = new AtomicLong(0);
     public AtomicLong recordNum = new AtomicLong(0);
-    public AtomicLong pointNum = new AtomicLong(0);
+    public AtomicLong nonNullPointNum = new AtomicLong(0);
+    public AtomicLong allPointNum = new AtomicLong(0);
     public AtomicLong timeCost = new AtomicLong(0);
 
     public Statistics(){
@@ -17,6 +18,6 @@ public class Statistics {
      * @return points / s
      */
     public double speed() {
-        return ((double) pointNum.get()) / ((double) timeCost.get()) * 1000_000_000L;
+        return ((double) nonNullPointNum.get()) / ((double) timeCost.get()) * 1000_000_000L;
     }
 }

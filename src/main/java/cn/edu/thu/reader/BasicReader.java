@@ -1,10 +1,11 @@
 package cn.edu.thu.reader;
 
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Config;
-import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class BasicReader implements Iterator<List<Record>> {
+public abstract class BasicReader implements Iterator<RecordBatch> {
 
   public static final String DEVICE_PREFIX = "root.group_0.d_";
 
@@ -105,13 +106,13 @@ public abstract class BasicReader implements Iterator<List<Record>> {
   /**
    * convert the cachedLines to Record list
    */
-  protected abstract List<Record> convertCachedLinesToRecords();
+  protected abstract RecordBatch convertCachedLinesToRecords();
 
-  public List<Record> next() {
+  public RecordBatch next() {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
-    List<Record> records = convertCachedLinesToRecords();
+    RecordBatch records = convertCachedLinesToRecords();
     cachedLines.clear();
 
     return records;
@@ -125,4 +126,13 @@ public abstract class BasicReader implements Iterator<List<Record>> {
   public abstract void onFileOpened() throws Exception;
 
   public abstract Schema getCurrentSchema();
+
+  public void close() throws IOException {
+    if (reader != null) {
+      reader.close();
+      cachedLines.clear();
+      reader = null;
+    }
+    logger.info("Record reader closed.");
+  }
 }
