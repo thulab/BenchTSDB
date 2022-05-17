@@ -201,7 +201,11 @@ public class CSVReader extends BasicReader {
   public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
     for (String cachedLine : cachedLines) {
-      records.add(convertToRecord(cachedLine));
+      try {
+        records.add(convertToRecord(cachedLine));
+      } catch (Exception e) {
+        logger.warn("Skipping mal-formatted record {}, ", cachedLine, e);
+      }
     }
     return records;
   }
@@ -246,7 +250,7 @@ public class CSVReader extends BasicReader {
       fields.add(null);
     }
 
-    for (int i = 1; i < split.length; i++) {
+    for (int i = 1; i < split.length && i - 1 < currentFileSchema.getFields().length; i++) {
       int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i - 1]);
       split[i] = removeQuote(split[i]);
 
@@ -271,7 +275,8 @@ public class CSVReader extends BasicReader {
   private Record convertToRecord(String line) {
     Record record;
     String[] split = line.split(config.CSV_SEPARATOR);
-    long time = parseTime(split[0]);
+    long time;
+    time = parseTime(split[0]);
     String tag = currentFileSchema.getTag();
     List<Object> fields;
 
