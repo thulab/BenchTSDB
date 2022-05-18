@@ -2,6 +2,7 @@ package cn.edu.thu.database.opentsdb;
 
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Config;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.common.ThuHttpRequest;
 import cn.edu.thu.database.IDataBaseManager;
@@ -38,7 +39,7 @@ public class OpenTSDBManager implements IDataBaseManager {
     }
 
     @Override
-    public long insertBatch(List<Record> records, Schema schema) {
+    public long insertBatch(RecordBatch records, Schema schema) {
 
         LinkedList<OpenTSDBPoint> openTSDBPoints = new LinkedList<>();
 

@@ -2,6 +2,7 @@ package cn.edu.thu.database.kairosdb;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.common.ThuHttpRequest;
 import cn.edu.thu.database.IDataBaseManager;
@@ -52,7 +53,7 @@ public class KairosDBManager implements IDataBaseManager {
   }
 
   @Override
-  public long insertBatch(List<Record> records, Schema schema) {
+  public long insertBatch(RecordBatch records, Schema schema) {
     List<KairosDBPoint> points = new ArrayList<>();
 
     // convert to kairosdb data points

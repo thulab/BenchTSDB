@@ -2,6 +2,7 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 import java.io.File;
@@ -149,7 +150,7 @@ public class TsFileManager implements IDataBaseManager {
   }
 
   @Override
-  public long insertBatch(List<Record> records, Schema schema) {
+  public long insertBatch(RecordBatch records, Schema schema) {
     if (records.isEmpty()) {
       return 0;
     }

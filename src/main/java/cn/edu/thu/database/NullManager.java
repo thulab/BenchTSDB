@@ -1,10 +1,7 @@
 package cn.edu.thu.database;
 
-import cn.edu.thu.common.Record;
-
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
-import cn.edu.thu.database.IDataBaseManager;
-import java.util.List;
 
 public class NullManager implements IDataBaseManager {
 
@@ -13,7 +10,7 @@ public class NullManager implements IDataBaseManager {
     }
 
     @Override
-    public long insertBatch(List<Record> records, Schema schema) {
+    public long insertBatch(RecordBatch records, Schema schema) {
         return 0;
     }
 

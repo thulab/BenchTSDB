@@ -2,6 +2,7 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 
@@ -9,8 +10,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -84,7 +85,8 @@ public class ORCManager implements IDataBaseManager {
     return writer;
   }
 
-  private void insertDoubleColumn(VectorizedRowBatch batch, int colIndex, int rowIndex, Record record) {
+  private void insertDoubleColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
+      Record record) {
     DoubleColumnVector v;
     if (!config.splitFileByDevice) {
       v = (DoubleColumnVector) batch.cols[colIndex + 2];
@@ -146,17 +148,29 @@ public class ORCManager implements IDataBaseManager {
   }
 
   @Override
-  public long insertBatch(List<Record> records, Schema schema) {
+  public long insertBatch(RecordBatch records, Schema schema) {
 
     long start = System.nanoTime();
 
     String tag = records.get(0).tag;
-    if(closeOnTagChanged && config.splitFileByDevice  && !Objects.equals(tag, lastTag)) {
+    if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {
       close();
     }
 
     Writer writer = getWriter(tag, schema);
 
+    if (config.useAlignedSeries) {
+      insertBatchAligned(records, schema, writer);
+    } else {
+      insertBatchNonAligned(records, schema, writer);
+    }
+
+    lastTag = tag;
+    return System.nanoTime() - start;
+  }
+
+  private void insertBatchAligned(RecordBatch records, Schema schema,
+      Writer writer) {
     VectorizedRowBatch batch = writer.getSchema().createRowBatch(records.size());
 
     for (int i = 0; i < records.size(); i++) {
@@ -186,8 +200,66 @@ public class ORCManager implements IDataBaseManager {
       }
     }
 
-    lastTag = tag;
-    return System.nanoTime() - start;
+    if (batch.size > 0) {
+      try {
+        writer.addRowBatch(batch);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      batch.reset();
+    }
+  }
+
+  private void insertBatchNonAligned(RecordBatch records, Schema schema,
+      Writer writer) {
+    VectorizedRowBatch batch = writer.getSchema().createRowBatch((int) records.getNonNullFieldNum());
+
+    int cnt = 0;
+    for (int i = 0; i < records.size(); i++) {
+      Record record = records.get(i);
+      LongColumnVector time = (LongColumnVector) batch.cols[0];
+
+      List<Object> fields = record.fields;
+      for (int fieldIndex = 0; fieldIndex < fields.size(); fieldIndex++) {
+        Object field = fields.get(fieldIndex);
+        if (field != null) {
+          time.vector[cnt] = record.timestamp;
+          if (!config.splitFileByDevice) {
+            BytesColumnVector device = (BytesColumnVector) batch.cols[1];
+            device.setVal(cnt, record.tag.getBytes(StandardCharsets.UTF_8));
+            BytesColumnVector measurement = (BytesColumnVector) batch.cols[2];
+            measurement.setVal(cnt, schema.getFields()[fieldIndex].getBytes());
+            BytesColumnVector value = (BytesColumnVector) batch.cols[3];
+            value.setVal(cnt, field.toString().getBytes());
+          } else {
+            BytesColumnVector measurement = (BytesColumnVector) batch.cols[1];
+            measurement.setVal(cnt, schema.getFields()[fieldIndex].getBytes());
+            BytesColumnVector value = (BytesColumnVector) batch.cols[2];
+            value.setVal(cnt, field.toString().getBytes());
+          }
+          batch.size++;
+
+          // If the batch is full, write it out and start over. actually not needed here
+          if (batch.size == batch.getMaxSize()) {
+            try {
+              writer.addRowBatch(batch);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            batch.reset();
+          }
+        }
+      }
+    }
+
+    if (batch.size > 0) {
+      try {
+        writer.addRowBatch(batch);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      batch.reset();
+    }
   }
 
   private Writer getWriter(String tag, Schema schema) {
@@ -207,6 +279,14 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private TypeDescription genWriteSchema(Schema schema) {
+    if (config.useAlignedSeries) {
+      return genAlignedWriteSchema(schema);
+    } else {
+      return genNonAlignedWriteSchema(schema);
+    }
+  }
+
+  private TypeDescription genAlignedWriteSchema(Schema schema) {
     TypeDescription description = TypeDescription.createStruct()
         .addField("timestamp", TypeDescription.createLong());
     if (!config.splitFileByDevice) {
@@ -216,6 +296,18 @@ public class ORCManager implements IDataBaseManager {
     for (int i = 0; i < schema.getFields().length; i++) {
       description.addField(schema.getFields()[i], toORCDataType(schema.getTypes()[i]));
     }
+    return description;
+  }
+
+  private TypeDescription genNonAlignedWriteSchema(Schema schema) {
+    TypeDescription description = TypeDescription.createStruct()
+        .addField("timestamp", TypeDescription.createLong());
+    if (!config.splitFileByDevice) {
+      description.addField("deviceId", TypeDescription.createString());
+    }
+    description.addField("measurementId", TypeDescription.createString());
+    description.addField("value", TypeDescription.createString());
+
     return description;
   }
 
@@ -241,7 +333,8 @@ public class ORCManager implements IDataBaseManager {
 
   private String getReadSchema(String field, Class<?> filedType) {
     if (!config.splitFileByDevice) {
-      return "struct<timestamp:bigint,deviceId:string," + field + ":" + dataTypeString(filedType) + ">";
+      return "struct<timestamp:bigint,deviceId:string," + field + ":" + dataTypeString(filedType)
+          + ">";
     } else {
       return "struct<timestamp:bigint," + field + ":" + dataTypeString(filedType) + ">";
     }
