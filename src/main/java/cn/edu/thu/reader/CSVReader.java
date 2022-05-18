@@ -33,12 +33,14 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,9 @@ public class CSVReader extends BasicReader {
   private Schema currentFileSchema;
   private boolean useDateFormat = true;
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+  private List<Function<String, Long>> timeParsers = Arrays.asList(this::parseTimeAsLong,
+      this::parseTimeWithFormat);
+  private int preferredTimeParserIndex = 0;
 
   private int fieldCnt;
   private long pointCnt;
@@ -264,20 +269,38 @@ public class CSVReader extends BasicReader {
     return fields;
   }
 
-  private long parseTime(String timeStr) {
-    if (useDateFormat) {
-      try {
-        return dateFormat.parse(timeStr).getTime();
-      } catch (ParseException e) {
-        useDateFormat = false;
-        return Long.parseLong(timeStr);
+  private long parseTime(String timeStr) throws ParseException {
+    for (int i = 0; i < timeParsers.size(); i++) {
+      int index = (preferredTimeParserIndex + i) % timeParsers.size();
+      Long time = timeParsers.get(index).apply(timeStr);
+      if (time != null) {
+        preferredTimeParserIndex = index;
+        return time;
       }
-    } else {
-      return Long.parseLong(timeStr);
     }
+
+    throw new ParseException("Cannot parse time string " + timeStr, 0);
   }
 
-  private Record convertToRecord(String line) {
+  private Long parseTimeWithFormat(String timeStr) {
+    try {
+      return dateFormat.parse(timeStr).getTime();
+    } catch (ParseException e) {
+      // ignore
+    }
+    return null;
+  }
+
+  private Long parseTimeAsLong(String timeStr) {
+    try {
+      return Long.parseLong(timeStr);
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+    return null;
+  }
+
+  private Record convertToRecord(String line) throws ParseException {
     Record record;
     String[] split = line.split(config.CSV_SEPARATOR);
     long time;
