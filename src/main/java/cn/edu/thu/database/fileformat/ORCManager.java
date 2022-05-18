@@ -332,11 +332,27 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private String getReadSchema(String field, Class<?> filedType) {
+    if (config.useAlignedSeries) {
+      return getAlignedReadSchema(field, filedType);
+    } else {
+      return getNonAlignedReadSchema();
+    }
+  }
+
+  private String getAlignedReadSchema(String field, Class<?> filedType) {
     if (!config.splitFileByDevice) {
       return "struct<timestamp:bigint,deviceId:string," + field + ":" + dataTypeString(filedType)
           + ">";
     } else {
       return "struct<timestamp:bigint," + field + ":" + dataTypeString(filedType) + ">";
+    }
+  }
+
+  private String getNonAlignedReadSchema() {
+    if (!config.splitFileByDevice) {
+      return "struct<timestamp:bigint,deviceId:string,measurementId:string,value:string>";
+    } else {
+      return "struct<timestamp:bigint,measurementId:string,value:string>";
     }
   }
 
@@ -355,7 +371,7 @@ public class ORCManager implements IDataBaseManager {
       VectorizedRowBatch batch = readSchema.createRowBatch();
       RecordReader rowIterator = reader.rows(reader.options().schema(readSchema));
 
-      int result = 0;
+      long result = 0;
       while (rowIterator.nextBatch(batch)) {
         for (int r = 0; r < batch.size; ++r) {
 
@@ -364,16 +380,10 @@ public class ORCManager implements IDataBaseManager {
           if (t < startTime || t > endTime) {
             continue;
           }
-
-          if (!config.splitFileByDevice) {
-            String deviceId = ((BytesColumnVector) batch.cols[1]).toString(r);
-            if (deviceId.endsWith(tagValue)) {
-              result++;
-            }
-            // double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
+          if (config.useAlignedSeries) {
+            result += countAligned(batch, tagValue, r);
           } else {
-            result++;
-            // double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
+            result += countNonAligned(batch, tagValue, r, field);
           }
         }
       }
@@ -386,6 +396,39 @@ public class ORCManager implements IDataBaseManager {
     }
 
     return System.nanoTime() - start;
+  }
+
+  private long countAligned(VectorizedRowBatch batch, String tagValue, int rowIndex) {
+    long result = 0;
+    if (!config.splitFileByDevice) {
+      String deviceId = ((BytesColumnVector) batch.cols[1]).toString(rowIndex);
+      if (deviceId.endsWith(tagValue)) {
+        result++;
+      }
+      // double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
+    } else {
+      result++;
+      // double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
+    }
+    return result;
+  }
+
+  private long countNonAligned(VectorizedRowBatch batch, String tagValue, int rowIndex,
+      String field) {
+    long result = 0;
+    if (!config.splitFileByDevice) {
+      String deviceId = ((BytesColumnVector) batch.cols[1]).toString(rowIndex);
+      String measurementId = ((BytesColumnVector) batch.cols[2]).toString(rowIndex);
+      if (deviceId.endsWith(tagValue) && measurementId.equals(field)) {
+        result++;
+      }
+    } else {
+      String measurementId = ((BytesColumnVector) batch.cols[1]).toString(rowIndex);
+      if (measurementId.equals(field)) {
+        result++;
+      }
+    }
+    return result;
   }
 
   @Override
