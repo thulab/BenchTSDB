@@ -33,6 +33,8 @@ public class Config {
   public int END_FILE = 100000;
 
   public static final String TAG_NAME = "deviceId";
+  public static final String MEASUREMENT_NAME = "measurementId";
+  public static final String VALUE_NAME = "value";
   public static final String TIME_NAME = "time";
   public static boolean FOR_QUERY = false;
   public boolean splitFileByDevice = true;
