@@ -101,7 +101,7 @@ public class ParquetManager implements IDataBaseManager {
       return PrimitiveTypeName.INT64;
     }
     if (type == Double.class) {
-      return PrimitiveTypeName.BOOLEAN;
+      return PrimitiveTypeName.DOUBLE;
     }
     return PrimitiveTypeName.BINARY;
   }
