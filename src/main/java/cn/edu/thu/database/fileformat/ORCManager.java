@@ -214,7 +214,6 @@ public class ORCManager implements IDataBaseManager {
       Writer writer) {
     VectorizedRowBatch batch = writer.getSchema().createRowBatch((int) records.getNonNullFieldNum());
 
-    int cnt = 0;
     for (int i = 0; i < records.size(); i++) {
       Record record = records.get(i);
       LongColumnVector time = (LongColumnVector) batch.cols[0];
@@ -223,19 +222,19 @@ public class ORCManager implements IDataBaseManager {
       for (int fieldIndex = 0; fieldIndex < fields.size(); fieldIndex++) {
         Object field = fields.get(fieldIndex);
         if (field != null) {
-          time.vector[cnt] = record.timestamp;
+          time.vector[batch.size] = record.timestamp;
           if (!config.splitFileByDevice) {
             BytesColumnVector device = (BytesColumnVector) batch.cols[1];
-            device.setVal(cnt, record.tag.getBytes(StandardCharsets.UTF_8));
+            device.setVal(batch.size, record.tag.getBytes(StandardCharsets.UTF_8));
             BytesColumnVector measurement = (BytesColumnVector) batch.cols[2];
-            measurement.setVal(cnt, schema.getFields()[fieldIndex].getBytes());
+            measurement.setVal(batch.size, schema.getFields()[fieldIndex].getBytes());
             BytesColumnVector value = (BytesColumnVector) batch.cols[3];
-            value.setVal(cnt, field.toString().getBytes());
+            value.setVal(batch.size, field.toString().getBytes());
           } else {
             BytesColumnVector measurement = (BytesColumnVector) batch.cols[1];
-            measurement.setVal(cnt, schema.getFields()[fieldIndex].getBytes());
+            measurement.setVal(batch.size, schema.getFields()[fieldIndex].getBytes());
             BytesColumnVector value = (BytesColumnVector) batch.cols[2];
-            value.setVal(cnt, field.toString().getBytes());
+            value.setVal(batch.size, field.toString().getBytes());
           }
           batch.size++;
 
