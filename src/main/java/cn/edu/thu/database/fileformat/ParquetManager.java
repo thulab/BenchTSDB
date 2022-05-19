@@ -230,6 +230,9 @@ public class ParquetManager implements IDataBaseManager {
       List<Object> fields = record.fields;
       for (int i = 0; i < fields.size(); i++) {
         Object field = fields.get(i);
+        if (field == null) {
+          continue;
+        }
         Group group = simpleGroupFactory.newGroup();
         group.add(Config.TIME_NAME, record.timestamp);
         if (!config.splitFileByDevice) {
