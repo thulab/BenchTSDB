@@ -65,7 +65,7 @@ public class CSVReader extends BasicReader {
     if (!config.splitFileByDevice) {
       logger.info("Collecting the overall schema");
       overallSchema = collectSchemaFromFiles(files);
-      logger.info("The overall schema is collected");
+      logger.info("The overall schema is collected, {}", overallSchema.brief());
       logger.debug("The overall schema is: {}", overallSchema);
     }
   }
@@ -127,11 +127,6 @@ public class CSVReader extends BasicReader {
       if (fillCache) {
         cachedLines.add(line);
       }
-    }
-
-    // if some fields cannot be inferred within a batch, assume them as text
-    for (Integer unknownTypeIndex : unknownTypeIndices) {
-      schema.getTypes()[unknownTypeIndex] = null;
     }
   }
 
@@ -366,7 +361,7 @@ public class CSVReader extends BasicReader {
       if (t1 == null) {
         return t2;
       }
-      if (t2 ==null) {
+      if (t2 == null) {
         return t1;
       }
 
