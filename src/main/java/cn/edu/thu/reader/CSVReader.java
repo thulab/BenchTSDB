@@ -131,7 +131,7 @@ public class CSVReader extends BasicReader {
 
     // if some fields cannot be inferred within a batch, assume them as text
     for (Integer unknownTypeIndex : unknownTypeIndices) {
-      schema.getTypes()[unknownTypeIndex] = String.class;
+      schema.getTypes()[unknownTypeIndex] = null;
     }
   }
 

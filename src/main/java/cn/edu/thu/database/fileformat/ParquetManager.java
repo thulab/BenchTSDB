@@ -292,7 +292,6 @@ public class ParquetManager implements IDataBaseManager {
           PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
           PrimitiveTypeName.BINARY, Config.VALUE_NAME));
-
     }
 
     MessageType querySchema = builder.named(schemaName);

@@ -418,12 +418,12 @@ public class ORCManager implements IDataBaseManager {
     if (!config.splitFileByDevice) {
       String deviceId = ((BytesColumnVector) batch.cols[1]).toString(rowIndex);
       String measurementId = ((BytesColumnVector) batch.cols[2]).toString(rowIndex);
-      if (deviceId.endsWith(tagValue) && measurementId.equals(field)) {
+      if (deviceId != null && deviceId.endsWith(tagValue) && measurementId != null && measurementId.equals(field)) {
         result++;
       }
     } else {
       String measurementId = ((BytesColumnVector) batch.cols[1]).toString(rowIndex);
-      if (measurementId.equals(field)) {
+      if (measurementId != null && measurementId.equals(field)) {
         result++;
       }
     }

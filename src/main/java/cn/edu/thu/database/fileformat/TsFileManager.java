@@ -51,8 +51,7 @@ public class TsFileManager implements IDataBaseManager {
 
   public TsFileManager(Config config) {
     this.config = config;
-    this.filePath =
-        "root.test" + File.separator + "0" + File.separator + "0" + File.separator + config.FILE_PATH;
+    this.filePath = config.FILE_PATH;
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -137,7 +136,7 @@ public class TsFileManager implements IDataBaseManager {
     } else if (type == Double.class) {
       return TSEncoding.GORILLA;
     } else {
-      return TSEncoding.PLAIN;
+      return TSEncoding.DICTIONARY;
     }
   }
 
