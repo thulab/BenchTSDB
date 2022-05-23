@@ -51,7 +51,7 @@ public class TsFileManager implements IDataBaseManager {
   public TsFileManager(Config config) {
     this.config = config;
     this.filePath =
-        "root.test" + File.separator + "0" + File.separator + "0" + File.separator + config.FILE_PATH;
+        config.FILE_PATH;
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -293,7 +293,7 @@ public class TsFileManager implements IDataBaseManager {
 
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
-      IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
+      IExpression filter = new SingleSeriesExpression(new Path(tagValue, field),
           new AndFilter(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime)));
 
       QueryExpression queryExpression = QueryExpression.create(paths, filter);
