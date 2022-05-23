@@ -1,16 +1,14 @@
 package cn.edu.thu.database;
 
-import cn.edu.thu.common.Record;
-
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
-import java.util.List;
 
 public interface IDataBaseManager {
 
     /**
      * @return time cost in ns
      */
-    long insertBatch(List<Record> records, Schema schema);
+    long insertBatch(RecordBatch records, Schema schema);
 
 
     /**

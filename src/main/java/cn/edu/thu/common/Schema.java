@@ -20,7 +20,10 @@
 package cn.edu.thu.common;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Schema {
   private String[] fields = null;
@@ -104,5 +107,26 @@ public class Schema {
         ", types=" + Arrays.toString(types) +
         ", tag='" + tag + '\'' +
         '}';
+  }
+
+  private Map<Class<?>, AtomicInteger> countType() {
+    Map<Class<?>, AtomicInteger> typeMap = new HashMap<>();
+    for (Class<?> type : types) {
+      if (type == null) {
+        type = String.class;
+      }
+      typeMap.compute(type, (t, cnt) -> {
+        if (cnt == null) {
+          cnt = new AtomicInteger();
+        }
+        cnt.incrementAndGet();
+        return cnt;
+      });
+    }
+    return typeMap;
+  }
+
+  public String brief() {
+    return fields.length + " fields, " + countType().toString();
   }
 }

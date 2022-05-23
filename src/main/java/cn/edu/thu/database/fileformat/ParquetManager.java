@@ -9,6 +9,7 @@ import static org.apache.parquet.filter2.predicate.FilterApi.ltEq;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 import java.io.File;
@@ -25,6 +26,8 @@ import org.apache.parquet.column.ParquetProperties;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.filter2.compat.FilterCompat;
+import org.apache.parquet.filter2.predicate.FilterPredicate;
+import org.apache.parquet.filter2.predicate.Operators.Eq;
 import org.apache.parquet.hadoop.ParquetInputFormat;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.ParquetWriter;
@@ -83,6 +86,14 @@ public class ParquetManager implements IDataBaseManager {
   }
 
   private MessageType toParquetSchema(Schema schema) {
+    if (config.useAlignedSeries) {
+      return toAlignedSchema(schema);
+    } else {
+      return toNonAlignedSchema(schema);
+    }
+  }
+
+  private MessageType toAlignedSchema(Schema schema) {
     Types.MessageTypeBuilder builder = Types.buildMessage();
     builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
     if (!config.splitFileByDevice) {
@@ -96,12 +107,27 @@ public class ParquetManager implements IDataBaseManager {
     return builder.named(schemaName);
   }
 
+  private MessageType toNonAlignedSchema(Schema schema) {
+    Types.MessageTypeBuilder builder = Types.buildMessage();
+    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
+    if (!config.splitFileByDevice) {
+      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
+    }
+    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED,
+        PrimitiveType.PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));
+    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED,
+        PrimitiveType.PrimitiveTypeName.BINARY, Config.VALUE_NAME));
+
+    return builder.named(schemaName);
+  }
+
+
   private PrimitiveType.PrimitiveTypeName toTypeName(Class<?> type) {
     if (type == Long.class) {
       return PrimitiveTypeName.INT64;
     }
     if (type == Double.class) {
-      return PrimitiveTypeName.BOOLEAN;
+      return PrimitiveTypeName.DOUBLE;
     }
     return PrimitiveTypeName.BINARY;
   }
@@ -146,7 +172,7 @@ public class ParquetManager implements IDataBaseManager {
 
 
   @Override
-  public long insertBatch(List<Record> records, Schema schema) {
+  public long insertBatch(RecordBatch records, Schema schema) {
     long start = System.nanoTime();
     String tag = records.get(0).tag;
     if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {
@@ -169,6 +195,14 @@ public class ParquetManager implements IDataBaseManager {
 
 
   private List<Group> convertRecords(List<Record> records, Schema schema) {
+    if (config.useAlignedSeries) {
+      return convertAlignedRecords(records, schema);
+    } else {
+      return convertNonAlignedRecords(records, schema);
+    }
+  }
+
+  private List<Group> convertAlignedRecords(List<Record> records, Schema schema) {
     List<Group> groups = new ArrayList<>();
     SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
         groupFactoryMap.get(records.get(0).tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
@@ -183,6 +217,32 @@ public class ParquetManager implements IDataBaseManager {
         writeColumn(group, record.fields.get(i), schema.getFields()[i], schema.getTypes()[i]);
       }
       groups.add(group);
+    }
+    return groups;
+  }
+
+  private List<Group> convertNonAlignedRecords(List<Record> records, Schema schema) {
+    List<Group> groups = new ArrayList<>();
+    String tag = records.get(0).tag;
+    SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
+        groupFactoryMap.get(tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
+    for(Record record: records) {
+      List<Object> fields = record.fields;
+      for (int i = 0; i < fields.size(); i++) {
+        Object field = fields.get(i);
+        if (field == null) {
+          continue;
+        }
+        Group group = simpleGroupFactory.newGroup();
+        group.add(Config.TIME_NAME, record.timestamp);
+        if (!config.splitFileByDevice) {
+          group.add(Config.TAG_NAME, record.tag);
+        }
+        group.add(Config.MEASUREMENT_NAME, schema.getFields()[i]);
+        group.add(Config.VALUE_NAME, field.toString());
+
+        groups.add(group);
+      }
     }
     return groups;
   }
@@ -205,14 +265,17 @@ public class ParquetManager implements IDataBaseManager {
   public long count(String tagValue, String field, long startTime, long endTime) {
 
     Configuration conf = new Configuration();
+    FilterPredicate finalFilter = and(gtEq(longColumn(Config.TIME_NAME), startTime),
+        ltEq(longColumn(Config.TIME_NAME), endTime));
     if (!config.splitFileByDevice) {
-      ParquetInputFormat.setFilterPredicate(conf, and(and(gtEq(longColumn(Config.TIME_NAME), startTime),
-          ltEq(longColumn(Config.TIME_NAME), endTime)),
-          eq(binaryColumn(Config.TAG_NAME), Binary.fromString(tagValue))));
-    } else {
-      ParquetInputFormat.setFilterPredicate(conf, and(gtEq(longColumn(Config.TIME_NAME), startTime),
-          ltEq(longColumn(Config.TIME_NAME), endTime)));
+      Eq<Binary> tagFilter = eq(binaryColumn(Config.TAG_NAME), Binary.fromString(tagValue));
+      finalFilter = and(finalFilter, tagFilter);
     }
+    if (!config.useAlignedSeries) {
+      Eq<Binary> measurementFilter = eq(binaryColumn(Config.MEASUREMENT_NAME), Binary.fromString(field));
+      finalFilter = and(finalFilter, measurementFilter);
+    }
+    ParquetInputFormat.setFilterPredicate(conf, finalFilter);
 
     FilterCompat.Filter filter = ParquetInputFormat.getFilter(conf);
 
@@ -222,7 +285,14 @@ public class ParquetManager implements IDataBaseManager {
       builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
     // todo add field type
-    builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
+    if (config.useAlignedSeries) {
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
+    } else {
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
+          PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
+          PrimitiveTypeName.BINARY, Config.VALUE_NAME));
+    }
 
     MessageType querySchema = builder.named(schemaName);
     conf.set(ReadSupport.PARQUET_READ_SCHEMA, querySchema.toString());

@@ -3,6 +3,7 @@ package cn.edu.thu.reader;
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -56,8 +57,8 @@ public class GeolifeReader extends BasicReader {
   }
 
   @Override
-  public List<Record> convertCachedLinesToRecords() {
-    List<Record> records = new ArrayList<>();
+  public RecordBatch convertCachedLinesToRecords() {
+    RecordBatch records = new RecordBatch();
     for (String line : cachedLines) {
       Record record = convertToRecord(line);
       if (record != null) {

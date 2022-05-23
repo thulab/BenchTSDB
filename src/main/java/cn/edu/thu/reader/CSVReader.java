@@ -23,6 +23,7 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.IndexedSchema;
 import cn.edu.thu.common.IndexedSchema.MapIndexedSchema;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,12 +33,14 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +53,19 @@ public class CSVReader extends BasicReader {
   private Schema currentFileSchema;
   private boolean useDateFormat = true;
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+  private List<Function<String, Long>> timeParsers = Arrays.asList(this::parseTimeAsLong,
+      this::parseTimeWithFormat);
+  private int preferredTimeParserIndex = 0;
+
+  private int fieldCnt;
+  private long pointCnt;
 
   public CSVReader(Config config, List<String> files) {
     super(config, files);
     if (!config.splitFileByDevice) {
       logger.info("Collecting the overall schema");
       overallSchema = collectSchemaFromFiles(files);
-      logger.info("The overall schema is collected");
+      logger.info("The overall schema is collected, {}", overallSchema.brief());
       logger.debug("The overall schema is: {}", overallSchema);
     }
   }
@@ -102,6 +111,10 @@ public class CSVReader extends BasicReader {
       indexToRemove.clear();
 
       for (Integer unknownTypeIndex : unknownTypeIndices) {
+        if (unknownTypeIndex + 1 >= lineSplit.length) {
+          continue;
+        }
+
         String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
         Class<?> aClass = inferType(field);
         if (aClass != null) {
@@ -114,11 +127,6 @@ public class CSVReader extends BasicReader {
       if (fillCache) {
         cachedLines.add(line);
       }
-    }
-
-    // if some fields cannot be inferred within a batch, assume them as text
-    for (Integer unknownTypeIndex : unknownTypeIndices) {
-      schema.getTypes()[unknownTypeIndex] = String.class;
     }
   }
 
@@ -194,11 +202,16 @@ public class CSVReader extends BasicReader {
   }
 
   @Override
-  public List<Record> convertCachedLinesToRecords() {
-    List<Record> records = new ArrayList<>();
+  public RecordBatch convertCachedLinesToRecords() {
+    RecordBatch records = new RecordBatch();
     for (String cachedLine : cachedLines) {
-      records.add(convertToRecord(cachedLine));
+      try {
+        records.add(convertToRecord(cachedLine));
+      } catch (Exception e) {
+        logger.warn("Skipping mal-formatted record {}, ", cachedLine, e);
+      }
     }
+    pointCnt += records.getNonNullFieldNum();
     return records;
   }
 
@@ -242,7 +255,7 @@ public class CSVReader extends BasicReader {
       fields.add(null);
     }
 
-    for (int i = 1; i < split.length; i++) {
+    for (int i = 1; i < split.length && i - 1 < currentFileSchema.getFields().length; i++) {
       int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i - 1]);
       split[i] = removeQuote(split[i]);
 
@@ -251,23 +264,42 @@ public class CSVReader extends BasicReader {
     return fields;
   }
 
-  private long parseTime(String timeStr) {
-    if (useDateFormat) {
-      try {
-        return dateFormat.parse(timeStr).getTime();
-      } catch (ParseException e) {
-        useDateFormat = false;
-        return Long.parseLong(timeStr);
+  private long parseTime(String timeStr) throws ParseException {
+    for (int i = 0; i < timeParsers.size(); i++) {
+      int index = (preferredTimeParserIndex + i) % timeParsers.size();
+      Long time = timeParsers.get(index).apply(timeStr);
+      if (time != null) {
+        preferredTimeParserIndex = index;
+        return time;
       }
-    } else {
-      return Long.parseLong(timeStr);
     }
+
+    throw new ParseException("Cannot parse time string " + timeStr, 0);
   }
 
-  private Record convertToRecord(String line) {
+  private Long parseTimeWithFormat(String timeStr) {
+    try {
+      return dateFormat.parse(timeStr).getTime();
+    } catch (ParseException e) {
+      // ignore
+    }
+    return null;
+  }
+
+  private Long parseTimeAsLong(String timeStr) {
+    try {
+      return Long.parseLong(timeStr);
+    } catch (NumberFormatException e) {
+      // ignore
+    }
+    return null;
+  }
+
+  private Record convertToRecord(String line) throws ParseException {
     Record record;
     String[] split = line.split(config.CSV_SEPARATOR);
-    long time = parseTime(split[0]);
+    long time;
+    time = parseTime(split[0]);
     String tag = currentFileSchema.getTag();
     List<Object> fields;
 
@@ -286,6 +318,7 @@ public class CSVReader extends BasicReader {
     Schema fileSchema;
     try {
       fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
+      fieldCnt += fileSchema.getFields().length;
       logger.info("File {} schema collected", currentFile);
       logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
@@ -328,7 +361,7 @@ public class CSVReader extends BasicReader {
       if (t1 == null) {
         return t2;
       }
-      if (t2 ==null) {
+      if (t2 == null) {
         return t1;
       }
 
@@ -352,5 +385,11 @@ public class CSVReader extends BasicReader {
 
       return schema.rebuildIndex();
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    super.close();
+    logger.info("Read {} points of {} fields from {} files", pointCnt, fieldCnt, files.size());
   }
 }

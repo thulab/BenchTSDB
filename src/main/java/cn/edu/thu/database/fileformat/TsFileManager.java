@@ -2,6 +2,7 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 import java.io.File;
@@ -50,8 +51,7 @@ public class TsFileManager implements IDataBaseManager {
 
   public TsFileManager(Config config) {
     this.config = config;
-    this.filePath =
-        config.FILE_PATH;
+    this.filePath = config.FILE_PATH;
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -136,20 +136,24 @@ public class TsFileManager implements IDataBaseManager {
     } else if (type == Double.class) {
       return TSEncoding.GORILLA;
     } else {
-      return TSEncoding.PLAIN;
+      return TSEncoding.DICTIONARY;
     }
   }
 
   private TsFileWriter getWriter(String tag, Schema schema) {
     if (!config.splitFileByDevice) {
-      return tagWriterMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(t, schema));
     } else {
-      return tagWriterMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(tag, t -> createWriter(t, schema));
     }
   }
 
   @Override
-  public long insertBatch(List<Record> records, Schema schema) {
+  public long insertBatch(RecordBatch records, Schema schema) {
+    if (records.isEmpty()) {
+      return 0;
+    }
+
     long start = System.nanoTime();
     String tag = records.get(0).tag;
     if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {
@@ -194,7 +198,7 @@ public class TsFileManager implements IDataBaseManager {
   private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
       Schema schema) {
     String tag = records.get(0).tag;
-    List<MeasurementSchema> schemas = tagSchemasMap.get(tag);
+    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
     NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
         records.size());
     for (Record record: records) {
@@ -213,10 +217,13 @@ public class TsFileManager implements IDataBaseManager {
     return tablet;
   }
 
+  private List<MeasurementSchema> tagToMeasurementSchemas(String tag) {
+    return tagSchemasMap.get(config.splitFileByDevice ? tag : Config.DEFAULT_TAG);
+  }
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {
     String tag = records.get(0).tag;
-    Tablet tablet = new Tablet(tag, tagSchemasMap.get(tag), records.size());
+    Tablet tablet = new Tablet(tag, tagToMeasurementSchemas(tag), records.size());
 
     long[] timestamps = tablet.timestamps;
     Object[] values = tablet.values;

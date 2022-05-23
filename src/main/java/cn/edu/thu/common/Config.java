@@ -33,6 +33,8 @@ public class Config {
   public int END_FILE = 100000;
 
   public static final String TAG_NAME = "deviceId";
+  public static final String MEASUREMENT_NAME = "measurementId";
+  public static final String VALUE_NAME = "value";
   public static final String TIME_NAME = "time";
   public static boolean FOR_QUERY = false;
   public boolean splitFileByDevice = true;
@@ -143,6 +145,9 @@ public class Config {
     syntheticPointNum =
         Integer
             .parseInt(properties.getOrDefault("synthetic_point_num", syntheticPointNum).toString());
+
+    INFER_TYPE_MAX_RECORD_NUM = Integer
+        .parseInt(properties.getOrDefault("INFER_TYPE_MAX_RECORD_NUM", INFER_TYPE_MAX_RECORD_NUM).toString());
 
     useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
         useAlignedTablet).toString());

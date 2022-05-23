@@ -1,7 +1,7 @@
 package cn.edu.thu.writer;
 
-import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Config;
+import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Statistics;
 import cn.edu.thu.database.*;
 import cn.edu.thu.reader.BasicReader;
@@ -66,16 +66,18 @@ public class RealDatasetWriter implements Runnable {
     try {
 
       while(reader.hasNext()) {
-        List<Record> batch = reader.next();
+        RecordBatch batch = reader.next();
         statistics.timeCost.addAndGet(database.insertBatch(batch, reader.getCurrentSchema()));
         statistics.recordNum.addAndGet(batch.size());
-        statistics.pointNum.addAndGet(batch.size() * reader.getCurrentSchema().getFields().length);
+        statistics.nonNullPointNum.addAndGet(batch.getNonNullFieldNum());
+        statistics.allPointNum.addAndGet(batch.getAllFieldNum());
       }
+      reader.close();
 
       statistics.timeCost.addAndGet(database.flush());
       statistics.timeCost.addAndGet(database.close());
 
-    } catch (Exception e) {
+    } catch (Throwable e) {
       logger.warn("Exception during write", e);
     }
 
