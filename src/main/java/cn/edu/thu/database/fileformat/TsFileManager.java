@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -52,6 +53,8 @@ public class TsFileManager implements IDataBaseManager {
   public TsFileManager(Config config) {
     this.config = config;
     this.filePath = config.FILE_PATH;
+    TSFileDescriptor.getInstance().getConfig().setGroupSizeInByte(1024 * 1024 * 1024);
+    TSFileDescriptor.getInstance().getConfig().setPageSizeInByte(16 * 1024 * 1024);
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -300,7 +303,7 @@ public class TsFileManager implements IDataBaseManager {
 
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
-      IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
+      IExpression filter = new SingleSeriesExpression(new Path(tagValue, field),
           new AndFilter(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime)));
 
       QueryExpression queryExpression = QueryExpression.create(paths, filter);

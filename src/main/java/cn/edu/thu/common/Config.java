@@ -42,6 +42,7 @@ public class Config {
   public int THREAD_NUM = 1;
   public int BATCH_SIZE = 500;
   public int INFER_TYPE_MAX_RECORD_NUM = 10;
+  public String parquetQueryType = "DOUBLE";
 
   public String CSV_SEPARATOR = ",";
 
@@ -163,6 +164,7 @@ public class Config {
         properties.getOrDefault("WATERWHEEL_QUERY_PORT", WATERWHEEL_QUERY_PORT).toString());
     LOCAL = Boolean.parseBoolean(properties.getOrDefault("LOCAL", LOCAL).toString());
 
+    parquetQueryType = properties.getOrDefault("parquet_query_type", FIELD).toString();
     QUERY_TAG = properties.getOrDefault("QUERY_TAG", QUERY_TAG).toString();
 
     FIELD = properties.getOrDefault("FIELD", FIELD).toString();

@@ -154,7 +154,8 @@ public class ParquetManager implements IDataBaseManager {
       logger.info("Created a writer for {}", tag);
       return new ParquetWriter(new Path(filePath), groupWriteSupport,
           CompressionCodecName.SNAPPY,
-          ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
+          ParquetWriter.DEFAULT_BLOCK_SIZE * 5, ParquetWriter.DEFAULT_PAGE_SIZE * 5,
+          ParquetWriter.DEFAULT_PAGE_SIZE * 5,
           true, true, ParquetProperties.WriterVersion.PARQUET_2_0);
     } catch (IOException e) {
       e.printStackTrace();
@@ -261,6 +262,17 @@ public class ParquetManager implements IDataBaseManager {
     }
   }
 
+  private PrimitiveTypeName getQueryDataType() {
+    switch (config.parquetQueryType) {
+      case "DOUEBLE":
+        return PrimitiveTypeName.DOUBLE;
+      case "INT64":
+        return PrimitiveTypeName.INT64;
+      default:
+        return PrimitiveTypeName.BINARY;
+    }
+  }
+
   @Override
   public long count(String tagValue, String field, long startTime, long endTime) {
 
@@ -286,7 +298,7 @@ public class ParquetManager implements IDataBaseManager {
     }
     // todo add field type
     if (config.useAlignedSeries) {
-      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, getQueryDataType(), field));
     } else {
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
           PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));

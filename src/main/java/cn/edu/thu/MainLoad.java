@@ -61,6 +61,7 @@ public class MainLoad {
     statistics.fileNum.addAndGet(files.size());
 
     Collections.sort(files);
+    files = files.subList(config.BEGIN_FILE - 1, config.END_FILE);
 
     List<List<String>> thread_files = new ArrayList<>();
     for (int i = 0; i < config.THREAD_NUM; i++) {
