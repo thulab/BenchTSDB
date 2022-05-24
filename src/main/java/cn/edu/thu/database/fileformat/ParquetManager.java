@@ -40,6 +40,7 @@ import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
+import org.apache.parquet.schema.Type.Repetition;
 import org.apache.parquet.schema.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -300,9 +301,9 @@ public class ParquetManager implements IDataBaseManager {
     if (config.useAlignedSeries) {
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, getQueryDataType(), field));
     } else {
-      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
+      builder.addField(new PrimitiveType(Repetition.REQUIRED,
           PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));
-      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
+      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED,
           PrimitiveTypeName.BINARY, Config.VALUE_NAME));
     }
 
