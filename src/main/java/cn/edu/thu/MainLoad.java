@@ -62,6 +62,8 @@ public class MainLoad {
 
     Collections.sort(files);
     files = files.subList(config.BEGIN_FILE - 1, config.END_FILE);
+    files.stream().map(File::new).map(File::length).reduce(Long::sum)
+        .ifPresent(sum -> logger.info("Total file size: {} MB", sum * 1.0 / 1024 / 1024));
 
     List<List<String>> thread_files = new ArrayList<>();
     for (int i = 0; i < config.THREAD_NUM; i++) {
@@ -88,7 +90,8 @@ public class MainLoad {
     Thread.UncaughtExceptionHandler handler = new BenchmarkExceptionHandler();
     ExecutorService executorService = Executors.newFixedThreadPool(config.THREAD_NUM);
     for (int threadId = 0; threadId < config.THREAD_NUM; threadId++) {
-      Thread thread = new Thread(new RealDatasetWriter(config, thread_files.get(threadId), statistics));
+      Thread thread = new Thread(
+          new RealDatasetWriter(config, thread_files.get(threadId), statistics));
       thread.setUncaughtExceptionHandler(handler);
       executorService.submit(thread);
     }
@@ -108,7 +111,7 @@ public class MainLoad {
     logger.info("All done! Total records:{}, non-null points:{}, time:{} ms, speed:{}, null "
             + "ratio: {}",
         statistics.recordNum,
-        statistics.nonNullPointNum, (float)statistics.timeCost.get() / 1000_000F,
+        statistics.nonNullPointNum, (float) statistics.timeCost.get() / 1000_000F,
         statistics.speed(),
         statistics.nonNullPointNum.get() * 1.0 / statistics.allPointNum.get());
 

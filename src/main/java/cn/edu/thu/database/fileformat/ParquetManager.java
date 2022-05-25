@@ -265,7 +265,7 @@ public class ParquetManager implements IDataBaseManager {
 
   private PrimitiveTypeName getQueryDataType() {
     switch (config.parquetQueryType) {
-      case "DOUEBLE":
+      case "DOUBLE":
         return PrimitiveTypeName.DOUBLE;
       case "INT64":
         return PrimitiveTypeName.INT64;
