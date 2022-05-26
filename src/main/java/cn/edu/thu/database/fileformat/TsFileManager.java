@@ -30,7 +30,6 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
-import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
@@ -164,25 +163,21 @@ public class TsFileManager implements IDataBaseManager {
     }
 
     TsFileWriter writer = getWriter(tag, schema);
-    if (config.useAlignedTablet) {
-      insertBatchAligned(records, writer, schema);
-    } else {
-      insertBatchNonAligned(records, writer, schema);
-    }
+    insertBatchAligned(records, writer, schema);
 
     lastTag = tag;
     return System.nanoTime() - start;
   }
 
-  private void insertBatchNonAligned(List<Record> records,
-      TsFileWriter writer, Schema schema) {
-    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
-    try {
-      writer.write(tablet);
-    } catch (Exception e) {
-      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
-    }
-  }
+//  private void insertBatchNonAligned(List<Record> records,
+//      TsFileWriter writer, Schema schema) {
+//    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
+//    try {
+//      writer.write(tablet);
+//    } catch (Exception e) {
+//      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+//    }
+//  }
 
   private void insertBatchAligned(List<Record> records,
       TsFileWriter writer, Schema schema) {
@@ -198,27 +193,27 @@ public class TsFileManager implements IDataBaseManager {
     }
   }
 
-  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
-      Schema schema) {
-    String tag = records.get(0).tag;
-    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
-    NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
-        records.size());
-    for (Record record: records) {
-      long timestamp = record.timestamp;
-      for (int i = 0; i < schema.getFields().length; i++) {
-        if (record.fields.get(i) != null) {
-          if (schema.getTypes()[i] != String.class) {
-            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
-          } else {
-            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp,
-                new Binary((String) record.fields.get(i)));
-          }
-        }
-      }
-    }
-    return tablet;
-  }
+//  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
+//      Schema schema) {
+//    String tag = records.get(0).tag;
+//    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
+//    NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
+//        records.size());
+//    for (Record record: records) {
+//      long timestamp = record.timestamp;
+//      for (int i = 0; i < schema.getFields().length; i++) {
+//        if (record.fields.get(i) != null) {
+//          if (schema.getTypes()[i] != String.class) {
+//            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
+//          } else {
+//            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp,
+//                new Binary((String) record.fields.get(i)));
+//          }
+//        }
+//      }
+//    }
+//    return tablet;
+//  }
 
   private List<MeasurementSchema> tagToMeasurementSchemas(String tag) {
     return tagSchemasMap.get(config.splitFileByDevice ? tag : Config.DEFAULT_TAG);
@@ -261,6 +256,7 @@ public class TsFileManager implements IDataBaseManager {
     double[] sensor = (double[]) column;
     if (field != null) {
       sensor[rowIndex] = (double) field;
+    } else {
       bitMap.mark(rowIndex);
     }
   }
@@ -269,6 +265,7 @@ public class TsFileManager implements IDataBaseManager {
     long[] sensor = (long[]) column;
     if (field != null) {
       sensor[rowIndex] = (long) field;
+    } else {
       bitMap.mark(rowIndex);
     }
   }
@@ -277,6 +274,7 @@ public class TsFileManager implements IDataBaseManager {
     Binary[] sensor = (Binary[]) column;
     if (field != null) {
       sensor[rowIndex] = new Binary((String) field);
+    } else {
       bitMap.mark(rowIndex);
     }
   }
