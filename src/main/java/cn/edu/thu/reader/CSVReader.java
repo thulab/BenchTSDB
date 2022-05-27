@@ -180,7 +180,7 @@ public class CSVReader extends BasicReader {
   }
 
   private Class<?> inferType(String field) {
-    if (field.equalsIgnoreCase("null")) {
+    if (field.equalsIgnoreCase("null") || field.isEmpty()) {
       return null;
     }
 
@@ -363,6 +363,10 @@ public class CSVReader extends BasicReader {
       }
       if (t2 == null) {
         return t1;
+      }
+
+      if (t1 == Double.class && t2 == Long.class || t1 == Long.class && t2 == Double.class) {
+        return Double.class;
       }
 
       if (t1 != t2) {
