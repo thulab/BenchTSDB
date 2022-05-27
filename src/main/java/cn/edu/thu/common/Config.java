@@ -67,6 +67,9 @@ public class Config {
   // TsFile configs
   public boolean useAlignedTablet = false;
   public boolean useAlignedSeries = false;
+  public String doubleEncoding = "PLAIN";
+  public String stringEncoding = "DICTIONARY";
+  public String longEncoding = "RLE";
 
   // for query
 
@@ -154,6 +157,9 @@ public class Config {
         useAlignedTablet).toString());
     useAlignedSeries = Boolean.parseBoolean(properties.getOrDefault("use_aligned_series",
         useAlignedSeries).toString());
+    doubleEncoding = properties.getOrDefault("double_encoding", doubleEncoding).toString();
+    stringEncoding = properties.getOrDefault("string_encoding", stringEncoding).toString();
+    longEncoding = properties.getOrDefault("long_encoding", longEncoding).toString();
 
     BEGIN_FILE = Integer.parseInt(properties.getOrDefault("BEGIN_FILE", BEGIN_FILE).toString());
     END_FILE = Integer.parseInt(properties.getOrDefault("END_FILE", END_FILE).toString());

@@ -30,6 +30,9 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
+import org.apache.iotdb.tsfile.write.page.PageWriter;
+import org.apache.iotdb.tsfile.write.page.TimePageWriter;
+import org.apache.iotdb.tsfile.write.page.ValuePageWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
@@ -134,12 +137,22 @@ public class TsFileManager implements IDataBaseManager {
 
   private TSEncoding toTsEncoding(Class<?> type) {
     if (type == Long.class) {
-      return TSEncoding.RLE;
+      return toTsEncoding(config.longEncoding);
     } else if (type == Double.class) {
-      return TSEncoding.GORILLA;
+      return toTsEncoding(config.doubleEncoding);
     } else {
-      return TSEncoding.DICTIONARY;
+      return toTsEncoding(config.stringEncoding);
     }
+  }
+
+  private TSEncoding toTsEncoding(String encodingString) {
+    for (TSEncoding encoding : TSEncoding.values()) {
+      if (encoding.name().equalsIgnoreCase(encodingString)) {
+        return encoding;
+      }
+    }
+    logger.warn("Unknown encoding {}", encodingString);
+    return TSEncoding.PLAIN;
   }
 
   private TsFileWriter getWriter(String tag, Schema schema) {
@@ -344,6 +357,24 @@ public class TsFileManager implements IDataBaseManager {
     tagSchemasMap.clear();
 
     logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
+    reportCompression();
     return System.nanoTime() - start;
+  }
+
+  private void reportCompression() {
+    long timeRawSize = PageWriter.timeRawSize.get() + TimePageWriter.timeRawSize.get();
+    long timeEncodedSize = PageWriter.timeEncodedSize.get() + TimePageWriter.timeEncodedSize.get();
+    long valueRawSize = PageWriter.valueRawSize.get() + ValuePageWriter.valueRawSize.get();
+    long valueEncodedSize = PageWriter.valueEncodedSize.get() + ValuePageWriter.valueEncodedSize.get();
+    long compressedSize =
+        PageWriter.compressedSize.get() + ValuePageWriter.valueCompressedSize.get() + TimePageWriter.timeCompressedSize
+            .get();
+    logger.info("Time raw size: {}, encoding ratio: {}; value raw size: {}, encoding ratio: {}; "
+            + "total compression ratio: {}",
+        timeRawSize,
+        timeEncodedSize * 1.0 / timeRawSize,
+        valueRawSize,
+        valueEncodedSize * 1.0 / valueRawSize,
+        compressedSize * 1.0 / (timeRawSize + valueRawSize));
   }
 }
