@@ -187,6 +187,9 @@ public class ORCManager implements IDataBaseManager {
       }
 
       for (int j = 0; j < schema.getFields().length; j++) {
+        if (config.ignoreStrings && schema.getTypes()[j] == String.class) {
+          continue;
+        }
         insertColumn(batch, j, i, record, schema.getTypes()[j]);
       }
 
@@ -223,6 +226,10 @@ public class ORCManager implements IDataBaseManager {
 
       List<Object> fields = record.fields;
       for (int fieldIndex = 0; fieldIndex < fields.size(); fieldIndex++) {
+        if (config.ignoreStrings && schema.getTypes()[fieldIndex] == String.class) {
+          continue;
+        }
+
         Object field = fields.get(fieldIndex);
         if (field != null) {
           time.vector[batch.size] = record.timestamp;
@@ -296,6 +303,9 @@ public class ORCManager implements IDataBaseManager {
     }
 
     for (int i = 0; i < schema.getFields().length; i++) {
+      if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
+        continue;
+      }
       description.addField(schema.getFields()[i], toORCDataType(schema.getTypes()[i]));
     }
     return description;

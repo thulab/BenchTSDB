@@ -105,6 +105,10 @@ public class TsFileManager implements IDataBaseManager {
       List<MeasurementSchema> schemas = new ArrayList<>();
 
       for (int i = 0; i < schema.getFields().length; i++) {
+        if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
+          continue;
+        }
+
         Map<String, String> props = new HashMap<>();
         props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
         MeasurementSchema measurementSchema = new MeasurementSchema(schema.getFields()[i],
@@ -247,6 +251,9 @@ public class TsFileManager implements IDataBaseManager {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
+        if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
+          continue;
+        }
         addToColumn(tablet.values[i], row, record.fields.get(i), tablet.bitMaps[i],
             schema.getTypes()[i]);
       }

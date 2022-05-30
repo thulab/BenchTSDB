@@ -19,12 +19,16 @@
 
 package cn.edu.thu.reader;
 
+import static cn.edu.thu.common.Utils.isQuoted;
+import static cn.edu.thu.common.Utils.removeQuote;
+
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.IndexedSchema;
 import cn.edu.thu.common.IndexedSchema.MapIndexedSchema;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.RecordBatch;
 import cn.edu.thu.common.Schema;
+import cn.edu.thu.common.Utils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -51,14 +55,12 @@ public class CSVReader extends BasicReader {
   private final int defaultPrecision = 8;
   private IndexedSchema overallSchema;
   private Schema currentFileSchema;
-  private boolean useDateFormat = true;
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
   private List<Function<String, Long>> timeParsers = Arrays.asList(this::parseTimeAsLong,
       this::parseTimeWithFormat);
   private int preferredTimeParserIndex = 0;
 
-  private int fieldCnt;
-  private long pointCnt;
+  private ReaderStatistic stat = new ReaderStatistic();
 
   public CSVReader(Config config, List<String> files) {
     super(config, files);
@@ -115,7 +117,7 @@ public class CSVReader extends BasicReader {
           continue;
         }
 
-        String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
+        String field = lineSplit[unknownTypeIndex + 1];
         Class<?> aClass = inferType(field);
         if (aClass != null) {
           schema.getTypes()[unknownTypeIndex] = aClass;
@@ -184,6 +186,14 @@ public class CSVReader extends BasicReader {
       return null;
     }
 
+    if (isQuoted(field)) {
+      field = removeQuote(field);
+      if (field.equalsIgnoreCase("null") || field.isEmpty()) {
+        return null;
+      }
+      return String.class;
+    }
+
     try {
       Long.parseLong(field);
       return Long.class;
@@ -211,17 +221,8 @@ public class CSVReader extends BasicReader {
         logger.warn("Skipping mal-formatted record {}, ", cachedLine, e);
       }
     }
-    pointCnt += records.getNonNullFieldNum();
+    stat.onBatchGenerated(records, getCurrentSchema());
     return records;
-  }
-
-  private String removeQuote(String s) {
-    if (s.length() >= 2 &&
-        s.startsWith("'") && s.endsWith("'") ||
-        s.startsWith("\"") && s.endsWith("\"")) {
-      return s.substring(1, s.length() - 1);
-    }
-    return s;
   }
 
   private Object parseField(String field, Schema schema, int index) {
@@ -242,7 +243,7 @@ public class CSVReader extends BasicReader {
   private List<Object> fieldsWithCurrentFileSchema(String[] split) {
     List<Object> fields = new ArrayList<>(currentFileSchema.getFields().length);
     for (int i = 1; i < split.length; i++) {
-      split[i] = removeQuote(split[i]);
+      split[i] = Utils.removeQuote(split[i]);
 
       fields.add(parseField(split[i], currentFileSchema, i - 1));
     }
@@ -257,7 +258,7 @@ public class CSVReader extends BasicReader {
 
     for (int i = 1; i < split.length && i - 1 < currentFileSchema.getFields().length; i++) {
       int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i - 1]);
-      split[i] = removeQuote(split[i]);
+      split[i] = Utils.removeQuote(split[i]);
 
       fields.set(overallIndex, parseField(split[i], overallSchema, overallIndex));
     }
@@ -318,7 +319,7 @@ public class CSVReader extends BasicReader {
     Schema fileSchema;
     try {
       fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
-      fieldCnt += fileSchema.getFields().length;
+      stat.onSchemaGenerated(fileSchema);
       logger.info("File {} schema collected", currentFile);
       logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
@@ -394,6 +395,6 @@ public class CSVReader extends BasicReader {
   @Override
   public void close() throws IOException {
     super.close();
-    logger.info("Read {} points of {} fields from {} files", pointCnt, fieldCnt, files.size());
+    stat.report();
   }
 }

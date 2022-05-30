@@ -18,4 +18,29 @@ public class Utils {
     }
   }
 
+  public static int fieldSize(Object field) {
+    if (field == null) {
+      return 0;
+    }
+    if (field instanceof Double) {
+      return Double.BYTES;
+    }
+    if (field instanceof Long) {
+      return Long.BYTES;
+    }
+    return ((String) field).getBytes().length;
+  }
+
+  public static String removeQuote(String s) {
+    if (isQuoted(s)) {
+      return s.substring(1, s.length() - 1);
+    }
+    return s;
+  }
+
+  public static boolean isQuoted(String s) {
+    return s.length() >= 2 &&
+        (s.startsWith("'") && s.endsWith("'") ||
+            s.startsWith("\"") && s.endsWith("\""));
+  }
 }

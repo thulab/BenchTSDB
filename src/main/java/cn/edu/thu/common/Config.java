@@ -31,6 +31,7 @@ public class Config {
 
   public int BEGIN_FILE = 0;
   public int END_FILE = 100000;
+  public boolean ignoreStrings = false;
 
   public static final String TAG_NAME = "deviceId";
   public static final String MEASUREMENT_NAME = "measurementId";
@@ -160,6 +161,12 @@ public class Config {
     doubleEncoding = properties.getOrDefault("double_encoding", doubleEncoding).toString();
     stringEncoding = properties.getOrDefault("string_encoding", stringEncoding).toString();
     longEncoding = properties.getOrDefault("long_encoding", longEncoding).toString();
+
+    ignoreStrings = Boolean.parseBoolean(properties.getOrDefault("ignore_strings",
+        ignoreStrings).toString());
+    if (ignoreStrings) {
+      logger.info("Ignoring string type data.");
+    }
 
     BEGIN_FILE = Integer.parseInt(properties.getOrDefault("BEGIN_FILE", BEGIN_FILE).toString());
     END_FILE = Integer.parseInt(properties.getOrDefault("END_FILE", END_FILE).toString());

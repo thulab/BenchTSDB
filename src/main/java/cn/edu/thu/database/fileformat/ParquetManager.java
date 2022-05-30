@@ -101,6 +101,9 @@ public class ParquetManager implements IDataBaseManager {
       builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
     for (int i = 0; i < schema.getFields().length; i++) {
+      if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
+        continue;
+      }
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
           toTypeName(schema.getTypes()[i]), schema.getFields()[i]));
     }
@@ -216,6 +219,9 @@ public class ParquetManager implements IDataBaseManager {
       }
 
       for(int i = 0; i < schema.getFields().length; i++) {
+        if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
+          continue;
+        }
         writeColumn(group, record.fields.get(i), schema.getFields()[i], schema.getTypes()[i]);
       }
       groups.add(group);
@@ -230,9 +236,10 @@ public class ParquetManager implements IDataBaseManager {
         groupFactoryMap.get(tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
     for(Record record: records) {
       List<Object> fields = record.fields;
+
       for (int i = 0; i < fields.size(); i++) {
         Object field = fields.get(i);
-        if (field == null) {
+        if (config.ignoreStrings && schema.getTypes()[i] == String.class || field == null) {
           continue;
         }
         Group group = simpleGroupFactory.newGroup();
