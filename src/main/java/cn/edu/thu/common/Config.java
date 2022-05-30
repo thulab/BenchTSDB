@@ -71,6 +71,8 @@ public class Config {
   public String doubleEncoding = "PLAIN";
   public String stringEncoding = "DICTIONARY";
   public String longEncoding = "RLE";
+  public int tsfilePageSize = 16 * 1024 * 1024;
+  public int tsfileGroupSize = 1024 * 1024 * 1024;
 
   // for query
 
@@ -161,6 +163,12 @@ public class Config {
     doubleEncoding = properties.getOrDefault("double_encoding", doubleEncoding).toString();
     stringEncoding = properties.getOrDefault("string_encoding", stringEncoding).toString();
     longEncoding = properties.getOrDefault("long_encoding", longEncoding).toString();
+    tsfilePageSize =
+        Integer
+            .parseInt(properties.getOrDefault("tsfile_page_size", tsfilePageSize).toString());
+    tsfileGroupSize =
+        Integer
+            .parseInt(properties.getOrDefault("tsfile_group_size", tsfileGroupSize).toString());
 
     ignoreStrings = Boolean.parseBoolean(properties.getOrDefault("ignore_strings",
         ignoreStrings).toString());

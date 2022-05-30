@@ -76,6 +76,6 @@ public class ReaderStatistic {
     logger.info("Non-null points of each type: {}", typeNonNullPointNumMap);
     logger.info("Total points of each type: {}", typeTotalPointNumMap);
     logger.info("Raw size of each type: {}", typeRawSizeMap);
-    logger.info("Column number of each type: {}", typeRawSizeMap);
+    logger.info("Column number of each type: {}", typeColNumMap);
   }
 }

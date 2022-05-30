@@ -55,8 +55,8 @@ public class TsFileManager implements IDataBaseManager {
   public TsFileManager(Config config) {
     this.config = config;
     this.filePath = config.FILE_PATH;
-    TSFileDescriptor.getInstance().getConfig().setGroupSizeInByte(1024 * 1024 * 1024);
-    TSFileDescriptor.getInstance().getConfig().setPageSizeInByte(16 * 1024 * 1024);
+    TSFileDescriptor.getInstance().getConfig().setGroupSizeInByte(config.tsfileGroupSize);
+    TSFileDescriptor.getInstance().getConfig().setPageSizeInByte(config.tsfilePageSize);
   }
 
   public TsFileManager(Config config, int threadNum) {
