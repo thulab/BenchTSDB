@@ -27,6 +27,8 @@ public abstract class BasicReader implements Iterator<RecordBatch> {
   protected String currentFile;
   protected String currentDeviceId;
 
+  protected ReaderStatistic stat = new ReaderStatistic();
+
   public BasicReader(Config config) {
     this.config = config;
   }

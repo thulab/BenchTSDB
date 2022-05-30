@@ -60,8 +60,6 @@ public class CSVReader extends BasicReader {
       this::parseTimeWithFormat);
   private int preferredTimeParserIndex = 0;
 
-  private ReaderStatistic stat = new ReaderStatistic();
-
   public CSVReader(Config config, List<String> files) {
     super(config, files);
     if (!config.splitFileByDevice) {
