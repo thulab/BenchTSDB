@@ -155,8 +155,8 @@ public class ParquetManager implements IDataBaseManager {
       logger.info("Created a writer for {}", tag);
       return new ParquetWriter(new Path(filePath), groupWriteSupport,
           CompressionCodecName.SNAPPY,
-          ParquetWriter.DEFAULT_BLOCK_SIZE * 5, ParquetWriter.DEFAULT_PAGE_SIZE * 5,
-          ParquetWriter.DEFAULT_PAGE_SIZE * 5,
+          ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
+          ParquetWriter.DEFAULT_PAGE_SIZE,
           true, true, ParquetProperties.WriterVersion.PARQUET_2_0);
     } catch (IOException e) {
       e.printStackTrace();
@@ -205,7 +205,7 @@ public class ParquetManager implements IDataBaseManager {
   }
 
   private List<Group> convertAlignedRecords(List<Record> records, Schema schema) {
-    List<Group> groups = new ArrayList<>();
+    List<Group> groups = new ArrayList<>(records.size());
     SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
         groupFactoryMap.get(records.get(0).tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
     for(Record record: records) {
