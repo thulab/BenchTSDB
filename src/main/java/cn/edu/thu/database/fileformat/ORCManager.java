@@ -89,15 +89,15 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private void insertDoubleColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
-      Record record) {
+      Object value) {
     DoubleColumnVector v;
     if (!config.splitFileByDevice) {
       v = (DoubleColumnVector) batch.cols[colIndex + 2];
     } else {
       v = (DoubleColumnVector) batch.cols[colIndex + 1];
     }
-    if (record.fields.get(colIndex) != null) {
-      v.vector[rowIndex] = (double) record.fields.get(colIndex);
+    if (value != null) {
+      v.vector[rowIndex] = (double) value;
       v.isNull[rowIndex] = false;
     } else {
       v.isNull[rowIndex] = true;
@@ -106,15 +106,15 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private void insertLongColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
-      Record record) {
+      Object value) {
     LongColumnVector v;
     if (!config.splitFileByDevice) {
       v = (LongColumnVector) batch.cols[colIndex + 2];
     } else {
       v = (LongColumnVector) batch.cols[colIndex + 1];
     }
-    if (record.fields.get(colIndex) != null) {
-      v.vector[rowIndex] = (long) record.fields.get(colIndex);
+    if (value != null) {
+      v.vector[rowIndex] = (long) value;
       v.isNull[rowIndex] = false;
     } else {
       v.isNull[rowIndex] = true;
@@ -123,15 +123,15 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private void insertStringColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
-      Record record) {
+      Object value) {
     BytesColumnVector v;
     if (!config.splitFileByDevice) {
       v = (BytesColumnVector) batch.cols[colIndex + 2];
     } else {
       v = (BytesColumnVector) batch.cols[colIndex + 1];
     }
-    if (record.fields.get(colIndex) != null) {
-      v.vector[rowIndex] = ((String) record.fields.get(colIndex)).getBytes();
+    if (value != null) {
+      v.vector[rowIndex] = ((String) value).getBytes();
       v.isNull[rowIndex] = false;
     } else {
       v.isNull[rowIndex] = true;
@@ -140,13 +140,13 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private void insertColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
-      Record record, Class<?> type) {
+      Object value, Class<?> type) {
     if (type == Long.class) {
-      insertLongColumn(batch, colIndex, rowIndex, record);
+      insertLongColumn(batch, colIndex, rowIndex, value);
     } else if (type == Double.class) {
-      insertDoubleColumn(batch, colIndex, rowIndex, record);
+      insertDoubleColumn(batch, colIndex, rowIndex, value);
     } else {
-      insertStringColumn(batch, colIndex, rowIndex, record);
+      insertStringColumn(batch, colIndex, rowIndex, value);
     }
   }
 
@@ -191,7 +191,7 @@ public class ORCManager implements IDataBaseManager {
         if (config.ignoreStrings && schema.getTypes()[j] == String.class) {
           continue;
         }
-        insertColumn(batch, colIndex, i, record, schema.getTypes()[j]);
+        insertColumn(batch, colIndex, i, record.fields.get(j), schema.getTypes()[j]);
         colIndex++;
       }
 
