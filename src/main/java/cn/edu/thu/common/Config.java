@@ -71,6 +71,7 @@ public class Config {
   public String doubleEncoding = "PLAIN";
   public String stringEncoding = "DICTIONARY";
   public String longEncoding = "RLE";
+  public String timeEncoding = "TS_2DIFF";
   public int tsfilePageSize = 16 * 1024 * 1024;
   public int tsfileGroupSize = 1024 * 1024 * 1024;
 
@@ -163,6 +164,7 @@ public class Config {
     doubleEncoding = properties.getOrDefault("double_encoding", doubleEncoding).toString();
     stringEncoding = properties.getOrDefault("string_encoding", stringEncoding).toString();
     longEncoding = properties.getOrDefault("long_encoding", longEncoding).toString();
+    timeEncoding = properties.getOrDefault("time_encoding", longEncoding).toString();
     tsfilePageSize =
         Integer
             .parseInt(properties.getOrDefault("tsfile_page_size", tsfilePageSize).toString());

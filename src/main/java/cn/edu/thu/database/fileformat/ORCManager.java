@@ -77,8 +77,8 @@ public class ORCManager implements IDataBaseManager {
       writer = OrcFile.createWriter(new Path(fullFilePath),
           OrcFile.writerOptions(new Configuration())
               .setSchema(orcSchema)
-              .stripeSize(256 * 1024 * 1024L)
-              .blockSize(1024 * 1024 * 1024L)
+              .stripeSize(64 * 1024 * 1024L)
+              .blockSize(256 * 1024 * 1024L)
               .bufferSize(16 * 1024 * 1024)
               .compress(CompressionKind.SNAPPY)
               .version(Version.V_0_12));

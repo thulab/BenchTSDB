@@ -57,6 +57,7 @@ public class TsFileManager implements IDataBaseManager {
     this.filePath = config.FILE_PATH;
     TSFileDescriptor.getInstance().getConfig().setGroupSizeInByte(config.tsfileGroupSize);
     TSFileDescriptor.getInstance().getConfig().setPageSizeInByte(config.tsfilePageSize);
+    TSFileDescriptor.getInstance().getConfig().setTimeEncoder(config.timeEncoding);
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -150,13 +151,7 @@ public class TsFileManager implements IDataBaseManager {
   }
 
   private TSEncoding toTsEncoding(String encodingString) {
-    for (TSEncoding encoding : TSEncoding.values()) {
-      if (encoding.name().equalsIgnoreCase(encodingString)) {
-        return encoding;
-      }
-    }
-    logger.warn("Unknown encoding {}", encodingString);
-    return TSEncoding.PLAIN;
+    return TSEncoding.valueOf(encodingString);
   }
 
   private TsFileWriter getWriter(String tag, Schema schema) {
