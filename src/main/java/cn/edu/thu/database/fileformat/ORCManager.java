@@ -186,11 +186,13 @@ public class ORCManager implements IDataBaseManager {
         device.setVal(i, record.tag.getBytes(StandardCharsets.UTF_8));
       }
 
+      int colIndex = 0;
       for (int j = 0; j < schema.getFields().length; j++) {
         if (config.ignoreStrings && schema.getTypes()[j] == String.class) {
           continue;
         }
-        insertColumn(batch, j, i, record, schema.getTypes()[j]);
+        insertColumn(batch, colIndex, i, record, schema.getTypes()[j]);
+        colIndex++;
       }
 
       batch.size++;
