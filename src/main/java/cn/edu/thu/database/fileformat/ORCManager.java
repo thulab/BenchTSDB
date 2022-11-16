@@ -221,17 +221,19 @@ public class ORCManager implements IDataBaseManager {
   private void insertBatchNonAligned(RecordBatch records, Schema schema,
       Writer writer) {
     VectorizedRowBatch batch = writer.getSchema().createRowBatch((int) records.getNonNullFieldNum());
+    Record firstRecord = records.get(0);
+    int fieldSize = firstRecord.fields.size();
 
-    for (int i = 0; i < records.size(); i++) {
-      Record record = records.get(i);
-      LongColumnVector time = (LongColumnVector) batch.cols[0];
+    for (int fieldIndex = 0; fieldIndex < fieldSize; fieldIndex++) {
+      if (config.ignoreStrings && schema.getTypes()[fieldIndex] == String.class) {
+        continue;
+      }
 
-      List<Object> fields = record.fields;
-      for (int fieldIndex = 0; fieldIndex < fields.size(); fieldIndex++) {
-        if (config.ignoreStrings && schema.getTypes()[fieldIndex] == String.class) {
-          continue;
-        }
+      for (int i = 0; i < records.size(); i++) {
+        Record record = records.get(i);
+        LongColumnVector time = (LongColumnVector) batch.cols[0];
 
+        List<Object> fields = record.fields;
         Object field = fields.get(fieldIndex);
         if (field != null) {
           time.vector[batch.size] = record.timestamp;

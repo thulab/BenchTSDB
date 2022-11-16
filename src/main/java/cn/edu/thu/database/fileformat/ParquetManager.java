@@ -234,10 +234,12 @@ public class ParquetManager implements IDataBaseManager {
     String tag = records.get(0).tag;
     SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
         groupFactoryMap.get(tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
-    for(Record record: records) {
-      List<Object> fields = record.fields;
+    int fieldSize = records.get(0).fields.size();
 
-      for (int i = 0; i < fields.size(); i++) {
+    for (int i = 0; i < fieldSize; i++) {
+      for(Record record: records) {
+        List<Object> fields = record.fields;
+
         Object field = fields.get(i);
         if (config.ignoreStrings && schema.getTypes()[i] == String.class || field == null) {
           continue;
@@ -249,10 +251,10 @@ public class ParquetManager implements IDataBaseManager {
         }
         group.add(Config.MEASUREMENT_NAME, schema.getFields()[i]);
         group.add(Config.VALUE_NAME, field.toString());
-
         groups.add(group);
       }
     }
+
     return groups;
   }
 
