@@ -16,9 +16,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -188,7 +190,7 @@ public class ParquetManager implements IDataBaseManager {
     }
 
     ParquetWriter writer = getWriter(tag, schema);
-    List<Group> groups = convertRecords(records, schema);
+    Iterable<Group> groups = convertRecords(records, schema);
     for(Group group: groups) {
       try {
         writer.write(group);
@@ -202,7 +204,7 @@ public class ParquetManager implements IDataBaseManager {
   }
 
 
-  private List<Group> convertRecords(List<Record> records, Schema schema) {
+  private Iterable<Group> convertRecords(List<Record> records, Schema schema) {
     if (config.useAlignedSeries) {
       return convertAlignedRecords(records, schema);
     } else {
@@ -232,33 +234,9 @@ public class ParquetManager implements IDataBaseManager {
     return groups;
   }
 
-  private List<Group> convertNonAlignedRecords(List<Record> records, Schema schema) {
-    List<Group> groups = new ArrayList<>();
-    String tag = records.get(0).tag;
-    SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
-        groupFactoryMap.get(tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
-    int fieldSize = records.get(0).fields.size();
+  private Iterable<Group> convertNonAlignedRecords(List<Record> records, Schema schema) {
 
-    for (int i = 0; i < fieldSize; i++) {
-      for(Record record: records) {
-        List<Object> fields = record.fields;
-
-        Object field = fields.get(i);
-        if (config.ignoreStrings && schema.getTypes()[i] == String.class || field == null) {
-          continue;
-        }
-        Group group = simpleGroupFactory.newGroup();
-        group.add(Config.TIME_NAME, record.timestamp);
-        if (!config.splitFileByDevice) {
-          group.add(Config.TAG_NAME, record.tag);
-        }
-        group.add(Config.MEASUREMENT_NAME, schema.getFields()[i]);
-        group.add(Config.VALUE_NAME, field.toString());
-        groups.add(group);
-      }
-    }
-
-    return groups;
+    return new RecordsToGroupIterator(records, schema);
   }
 
   private void writeColumn(Group group, Object field, String fieldName, Class<?> type) {
@@ -365,5 +343,82 @@ public class ParquetManager implements IDataBaseManager {
     }
     logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
     return System.nanoTime() - start;
+  }
+
+  private class RecordsToGroupIterator implements Iterator<Group>, Iterable<Group> {
+
+    private List<Record> records;
+    private Schema schema;
+    private String tag;
+    private SimpleGroupFactory groupFactory;
+    private int fieldIndex;
+    private int fieldNum;
+    private int recordIndex = -1;
+    private int recordNum;
+    private Group next;
+
+    public RecordsToGroupIterator(List<Record> records, Schema schema) {
+      this.records = records;
+      this.schema = schema;
+
+      tag = records.get(0).tag;
+      groupFactory = config.splitFileByDevice ?
+          groupFactoryMap.get(tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
+      fieldNum = records.get(0).fields.size();
+      recordNum = records.size();
+    }
+
+    private boolean nextIndex() {
+      if (fieldIndex >= fieldNum) {
+        return false;
+      }
+
+      recordIndex ++;
+      if (recordIndex == recordNum) {
+        recordIndex = 0;
+        fieldIndex++;
+      }
+      return fieldIndex < fieldNum;
+    }
+    @Override
+    public boolean hasNext() {
+      if (next != null) {
+        return true;
+      }
+      while (nextIndex()) {
+        Record record = records.get(recordIndex);
+        List<Object> fields = record.fields;
+
+        Object field = fields.get(fieldIndex);
+        if (config.ignoreStrings && schema.getTypes()[fieldIndex] == String.class || field == null) {
+          continue;
+        }
+        Group group = groupFactory.newGroup();
+        group.add(Config.TIME_NAME, record.timestamp);
+        if (!config.splitFileByDevice) {
+          group.add(Config.TAG_NAME, record.tag);
+        }
+        group.add(Config.MEASUREMENT_NAME, schema.getFields()[fieldIndex]);
+        group.add(Config.VALUE_NAME, field.toString());
+        next = group;
+        return true;
+      }
+      return false;
+    }
+
+    @Override
+    public Group next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      Group ret = next;
+      next = null;
+      return ret;
+    }
+
+    @Override
+    public Iterator<Group> iterator() {
+      return this;
+    }
   }
 }

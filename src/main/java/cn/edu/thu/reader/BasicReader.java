@@ -23,6 +23,7 @@ public abstract class BasicReader implements Iterator<RecordBatch> {
   protected BufferedReader reader;
   protected List<String> cachedLines;
   protected int currentFileIndex = 0;
+  protected int fileRowCnt;
 
   protected String currentFile;
   protected String currentDeviceId;
@@ -41,11 +42,21 @@ public abstract class BasicReader implements Iterator<RecordBatch> {
       reader = new BufferedReader(new FileReader(files.get(currentFileIndex)));
       currentFile = files.get(currentFileIndex);
       logger.info("start to read {}-th file {}", currentFileIndex, currentFile);
+      fileRowCnt = 0;
       onFileOpened();
     } catch (Exception e) {
       logger.error("meet exception when init file: {}", currentFile);
       e.printStackTrace();
     }
+  }
+
+  private void newFile() throws Exception {
+    currentFile = files.get(++currentFileIndex);
+    logger.info("start to read {}-th file {}", currentFileIndex, currentFile);
+    reader.close();
+    reader = new BufferedReader(new FileReader(currentFile));
+    fileRowCnt = 0;
+    onFileOpened();
   }
 
   public boolean hasNext() {
@@ -70,11 +81,7 @@ public abstract class BasicReader implements Iterator<RecordBatch> {
           // current file has been resolved, read next file
           if(cachedLines.isEmpty()) {
             if (currentFileIndex < files.size() - 1) {
-              currentFile = files.get(++currentFileIndex);
-              logger.info("start to read {}-th file {}", currentFileIndex, currentFile);
-              reader.close();
-              reader = new BufferedReader(new FileReader(currentFile));
-              onFileOpened();
+              newFile();
               continue;
             } else {
               // no more file to read
@@ -92,6 +99,18 @@ public abstract class BasicReader implements Iterator<RecordBatch> {
 
         // read a line, cache it
         cachedLines.add(line);
+        fileRowCnt ++;
+        if (config.rowLimitPerFile > 0 && fileRowCnt >= config.rowLimitPerFile) {
+          if (currentFileIndex < files.size() - 1) {
+            newFile();
+            continue;
+          } else {
+            // no more file to read
+            reader.close();
+            reader = null;
+            break;
+          }
+        }
         if (cachedLines.size() >= config.BATCH_SIZE) {
           break;
         }

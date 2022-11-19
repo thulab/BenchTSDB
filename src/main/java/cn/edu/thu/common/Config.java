@@ -42,6 +42,7 @@ public class Config {
 
   public int THREAD_NUM = 1;
   public int BATCH_SIZE = 500;
+  public int rowLimitPerFile = 1000000;
   public int INFER_TYPE_MAX_RECORD_NUM = 10;
   public String parquetQueryType = "DOUBLE";
 
@@ -171,6 +172,9 @@ public class Config {
     tsfileGroupSize =
         Integer
             .parseInt(properties.getOrDefault("tsfile_group_size", tsfileGroupSize).toString());
+    rowLimitPerFile =
+        Integer
+            .parseInt(properties.getOrDefault("row_limit_per_file", rowLimitPerFile).toString());
 
     ignoreStrings = Boolean.parseBoolean(properties.getOrDefault("ignore_strings",
         ignoreStrings).toString());

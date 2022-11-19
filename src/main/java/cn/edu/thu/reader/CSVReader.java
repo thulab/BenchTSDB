@@ -75,7 +75,7 @@ public class CSVReader extends BasicReader {
     logger.info("Collecting schema from {} files", files.size());
     for (int i = 0; i < files.size(); i++) {
       String file = files.get(i);
-      logger.info("Collecting schema from {} ({}/{})", file, (i+1), files.size());
+      logger.info("Collecting schema from {} ({}/{})", file, (i + 1), files.size());
       schemaSet.union(collectSchemaFromFile(file));
     }
     return schemaSet.toSchema();
@@ -101,12 +101,15 @@ public class CSVReader extends BasicReader {
       unknownTypeIndices.add(i);
     }
 
+    fileRowCnt = 0;
     String line;
     List<Integer> indexToRemove = new ArrayList<>();
     int numRead = 0;
     while ((line = reader.readLine()) != null
         && !unknownTypeIndices.isEmpty()
-        && ++numRead <= config.INFER_TYPE_MAX_RECORD_NUM) {
+        && ++numRead <= config.INFER_TYPE_MAX_RECORD_NUM
+        && (config.rowLimitPerFile > 0 && fileRowCnt < config.rowLimitPerFile)) {
+      fileRowCnt ++;
       String[] lineSplit = line.split(config.CSV_SEPARATOR);
       indexToRemove.clear();
 
