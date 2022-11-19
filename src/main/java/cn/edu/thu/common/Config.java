@@ -72,8 +72,10 @@ public class Config {
   public String stringEncoding = "DICTIONARY";
   public String longEncoding = "RLE";
   public String timeEncoding = "TS_2DIFF";
+  public String compression = "SNAPPY";
   public int tsfilePageSize = 16 * 1024 * 1024;
   public int tsfileGroupSize = 1024 * 1024 * 1024;
+  public boolean allAsString = false;
 
   // for query
 
@@ -113,9 +115,6 @@ public class Config {
   }
 
   private void init() {
-    if (!DATA_DIR.endsWith("/")) {
-      DATA_DIR += "/";
-    }
     logger.info("use dataset: {}", DATA_SET);
   }
 
@@ -165,6 +164,7 @@ public class Config {
     stringEncoding = properties.getOrDefault("string_encoding", stringEncoding).toString();
     longEncoding = properties.getOrDefault("long_encoding", longEncoding).toString();
     timeEncoding = properties.getOrDefault("time_encoding", longEncoding).toString();
+    compression = properties.getOrDefault("compression", longEncoding).toString();
     tsfilePageSize =
         Integer
             .parseInt(properties.getOrDefault("tsfile_page_size", tsfilePageSize).toString());
@@ -174,6 +174,8 @@ public class Config {
 
     ignoreStrings = Boolean.parseBoolean(properties.getOrDefault("ignore_strings",
         ignoreStrings).toString());
+    allAsString = Boolean.parseBoolean(properties.getOrDefault("all_as_string",
+        allAsString).toString());
     if (ignoreStrings) {
       logger.info("Ignoring string type data.");
     }

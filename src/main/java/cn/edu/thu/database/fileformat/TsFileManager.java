@@ -30,6 +30,7 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
+import org.apache.iotdb.tsfile.write.monitor.WriteStatistics;
 import org.apache.iotdb.tsfile.write.page.PageWriter;
 import org.apache.iotdb.tsfile.write.page.TimePageWriter;
 import org.apache.iotdb.tsfile.write.page.ValuePageWriter;
@@ -112,9 +113,11 @@ public class TsFileManager implements IDataBaseManager {
 
         Map<String, String> props = new HashMap<>();
         props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
+        Class<?> type = config.allAsString ? String.class : schema.getTypes()[i];
         MeasurementSchema measurementSchema = new MeasurementSchema(schema.getFields()[i],
-            toTsDataType(schema.getTypes()[i]),
-            toTsEncoding(schema.getTypes()[i]), CompressionType.SNAPPY, props);
+            toTsDataType(type),
+            toTsEncoding(type),
+            toCompressionType(config.compression), props);
         template.put(schema.getFields()[i], measurementSchema);
 
         schemas.add(measurementSchema);
@@ -130,6 +133,15 @@ public class TsFileManager implements IDataBaseManager {
     return writer;
   }
 
+
+  private CompressionType toCompressionType(String name) {
+    for (CompressionType value : CompressionType.values()) {
+      if (value.name().equalsIgnoreCase(name)) {
+        return value;
+      }
+    }
+    return null;
+  }
   private TSDataType toTsDataType(Class<?> type) {
     if (type == Long.class) {
       return TSDataType.INT64;
@@ -250,8 +262,9 @@ public class TsFileManager implements IDataBaseManager {
         if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
           continue;
         }
+        Class<?> type = config.allAsString ? String.class : schema.getTypes()[i];
         addToColumn(tablet.values[tabletColIndex], row, record.fields.get(i), tablet.bitMaps[tabletColIndex],
-            schema.getTypes()[i]);
+            type);
         tabletColIndex ++;
       }
     }
@@ -290,7 +303,7 @@ public class TsFileManager implements IDataBaseManager {
   private void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     Binary[] sensor = (Binary[]) column;
     if (field != null) {
-      sensor[rowIndex] = new Binary((String) field);
+      sensor[rowIndex] = new Binary(field.toString());
     } else {
       bitMap.mark(rowIndex);
     }
@@ -366,19 +379,10 @@ public class TsFileManager implements IDataBaseManager {
   }
 
   private void reportCompression() {
-    long timeRawSize = PageWriter.timeRawSize.get() + TimePageWriter.timeRawSize.get();
-    long timeEncodedSize = PageWriter.timeEncodedSize.get() + TimePageWriter.timeEncodedSize.get();
-    long valueRawSize = PageWriter.valueRawSize.get() + ValuePageWriter.valueRawSize.get();
-    long valueEncodedSize = PageWriter.valueEncodedSize.get() + ValuePageWriter.valueEncodedSize.get();
-    long compressedSize =
-        PageWriter.compressedSize.get() + ValuePageWriter.valueCompressedSize.get() + TimePageWriter.timeCompressedSize
-            .get();
-    logger.info("Time raw size: {}, encoding ratio: {}; value raw size: {}, encoding ratio: {}; "
-            + "total compression ratio: {}",
-        timeRawSize,
-        timeEncodedSize * 1.0 / timeRawSize,
-        valueRawSize,
-        valueEncodedSize * 1.0 / valueRawSize,
-        compressedSize * 1.0 / (timeRawSize + valueRawSize));
+    try {
+      WriteStatistics.INSTANCE.dump("size_statistics.csv");
+    } catch (IOException e) {
+      logger.error("Cannot dump statistics", e);
+    }
   }
 }

@@ -24,12 +24,9 @@
 
   <repositories>
     <repository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>bintray-chronix-maven</id>
-      <name>bintray</name>
-      <url>http://dl.bintray.com/chronix/maven</url>
+      <id>repo1</id>
+      <name>repo1</name>
+      <url>https://repo1.maven.org/maven2/</url>
     </repository>
   </repositories>
 
@@ -88,12 +85,16 @@
       <!--<version>0.7.0</version>-->
     <!--</dependency>-->
 
-
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-column</artifactId>
+      <version>1.12.3</version> <!-- or latest version -->
+    </dependency>
 
     <dependency>
       <groupId>org.apache.parquet</groupId>
-      <artifactId>parquet-avro</artifactId>
-      <version>1.12.2</version> <!-- or latest version -->
+      <artifactId>parquet-hadoop</artifactId>
+      <version>1.12.3</version> <!-- or latest version -->
     </dependency>
 
     <dependency>

@@ -29,3 +29,5 @@
 **/routine
 /target/
 *.file
+data/
+size_statistics.csv

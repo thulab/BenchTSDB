@@ -14,7 +14,7 @@ import cn.edu.thu.reader.TDriveReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.*;
-import backup.MLabUtilizationReader;
+//import backup.MLabUtilizationReader;
 
 public class RealDatasetWriter implements Runnable {
 
@@ -42,9 +42,9 @@ public class RealDatasetWriter implements Runnable {
       case "TDRIVE":
         reader = new TDriveReader(config, files);
         break;
-      case "MLAB_UTILIZATION":
-        reader = new MLabUtilizationReader(config, files);
-        break;
+//      case "MLAB_UTILIZATION":
+//        reader = new MLabUtilizationReader(config, files);
+//        break;
       case "REDD":
         reader = new ReddReader(config, files);
         break;

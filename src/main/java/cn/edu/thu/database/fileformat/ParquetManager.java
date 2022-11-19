@@ -98,7 +98,7 @@ public class ParquetManager implements IDataBaseManager {
     Types.MessageTypeBuilder builder = Types.buildMessage();
     builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
     if (!config.splitFileByDevice) {
-      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
     for (int i = 0; i < schema.getFields().length; i++) {
       if (config.ignoreStrings && schema.getTypes()[i] == String.class) {
@@ -115,7 +115,8 @@ public class ParquetManager implements IDataBaseManager {
     Types.MessageTypeBuilder builder = Types.buildMessage();
     builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
     if (!config.splitFileByDevice) {
-      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
+      builder.addField(new PrimitiveType(Repetition.OPTIONAL,
+          PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
     builder.addField(new PrimitiveType(Type.Repetition.REQUIRED,
         PrimitiveType.PrimitiveTypeName.BINARY, Config.MEASUREMENT_NAME));
@@ -153,14 +154,16 @@ public class ParquetManager implements IDataBaseManager {
 
     String filePath = tagToFilePath(tag);
     new File(filePath).delete();
+
     try {
       groupFactoryMap.put(tag, new SimpleGroupFactory(messageType));
       logger.info("Created a writer for {}", tag);
+
       return new ParquetWriter(new Path(filePath), groupWriteSupport,
           CompressionCodecName.SNAPPY,
           ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
           ParquetWriter.DEFAULT_PAGE_SIZE,
-          true, true, ParquetProperties.WriterVersion.PARQUET_2_0);
+          true, false, ParquetProperties.WriterVersion.PARQUET_2_0);
     } catch (IOException e) {
       e.printStackTrace();
     }
